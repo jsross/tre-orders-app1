@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ms. Balaji Jules</title>
+  <title>Ms. Balaji Jules Orders</title>
   <style>
     body { font-family: Arial; background: #f4f4f4; text-align: center; margin: 0; padding: 0; }
     h1 { background: #333; color: white; padding: 20px; margin: 0; }
@@ -18,7 +18,7 @@
 </head>
 <body>
 
-<h1>Welcome to Ms. Balaji Jules</h1>
+<h1>Welcome to Ms. Balaji Jules Orders</h1>
 
 <div id="startPage" class="box">
   <button onclick="employeeFlow()">I am Employee</button>
@@ -50,9 +50,6 @@
   </table>
 
   <button onclick="backToStart()">Back to Start</button>
-  <hr>
-  <button onclick="exportData()">Export Data</button>
-  <input type="file" id="importFile" onchange="importData(event)">
 </div>
 
 <div id="orderPage" class="box hidden">
@@ -72,26 +69,30 @@
 <script>
 let isEmployee = false;
 
-// --- Navigation ---
+// --- Page navigation and persistence ---
+function showPage(pageId) {
+  ['startPage','codePage','employeePage','orderPage'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById(pageId).style.display = 'block';
+  localStorage.setItem('currentPage', pageId);
+}
+
 function employeeFlow() {
   isEmployee = true;
-  document.getElementById("startPage").style.display = "none";
-  document.getElementById("codePage").style.display = "block";
+  showPage('codePage');
 }
 
 function notEmployeeFlow() {
   isEmployee = false;
-  document.getElementById("startPage").style.display = "none";
-  document.getElementById("orderPage").style.display = "block";
+  showPage('orderPage');
   updateOrderTable();
 }
 
-// --- Employee code ---
 function checkEmployeeCode() {
   const code = document.getElementById("employeeCode").value;
   if(code === "10203040") {
-    document.getElementById("codePage").style.display = "none";
-    document.getElementById("employeePage").style.display = "block";
+    showPage('employeePage');
     updateListingTable();
     updateEmployeeOrdersTable();
     populateOrderSelect();
@@ -100,9 +101,14 @@ function checkEmployeeCode() {
   }
 }
 
+function backToStart() {
+  showPage('startPage');
+  document.getElementById("orderMessage").innerText = "";
+}
+
 // --- Items ---
 function addItem() {
-  const name = document.getElementById("itemName").value;
+  const name = document.getElementById("itemName").value.trim();
   const price = parseFloat(document.getElementById("itemPrice").value);
   if(!name || isNaN(price)) { alert("Fill both fields"); return; }
 
@@ -175,7 +181,7 @@ function updateEmployeeOrdersTable() {
 
 // --- Submit order ---
 function submitOrder() {
-  const name = document.getElementById("orderName").value;
+  const name = document.getElementById("orderName").value.trim();
   const qty = parseInt(document.getElementById("orderQty").value);
   const itemIndex = document.getElementById("orderItem").value;
 
@@ -198,42 +204,21 @@ function submitOrder() {
   if(isEmployee) updateEmployeeOrdersTable();
 }
 
-// --- Export / Import ---
-function exportData() {
-  const data = {
-    items: JSON.parse(localStorage.getItem("items") || "[]"),
-    orders: JSON.parse(localStorage.getItem("orders") || "[]")
-  };
-  const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "tre_data.json";
-  a.click();
-}
-
-function importData(event) {
-  const file = event.target.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = JSON.parse(e.target.result);
-    localStorage.setItem("items", JSON.stringify(data.items || []));
-    localStorage.setItem("orders", JSON.stringify(data.orders || []));
-    updateListingTable();
-    updateOrderTable();
-    updateEmployeeOrdersTable();
-    populateOrderSelect();
-  };
-  reader.readAsText(file);
-}
-
-// --- Back to start ---
-function backToStart() {
-  document.getElementById("startPage").style.display = "block";
-  document.getElementById("codePage").style.display = "none";
-  document.getElementById("employeePage").style.display = "none";
-  document.getElementById("orderPage").style.display = "none";
-  document.getElementById("orderMessage").innerText = "";
+// --- On page load, restore last page ---
+window.onload = function() {
+  const savedPage = localStorage.getItem('currentPage');
+  if(savedPage) {
+    showPage(savedPage);
+    if(savedPage === 'employeePage') {
+      updateListingTable();
+      updateEmployeeOrdersTable();
+      populateOrderSelect();
+    } else if(savedPage === 'orderPage') {
+      updateOrderTable();
+    }
+  } else {
+    showPage('startPage');
+  }
 }
 </script>
 
