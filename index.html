@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ms. Balaji Jules</title>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; text-align: center; margin: 0; padding: 0; }
+    h1 { background: #333; color: white; padding: 20px; margin: 0; }
+    .box { width: 90%; max-width: 600px; background: white; margin: 30px auto; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button, select { width: 100%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #aaa; }
+    button { background: #333; color: white; border: none; cursor: pointer; }
+    button:hover { background: #555; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    .hidden { display: none; }
+    .deleteBtn { background: red; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .deleteBtn:hover { background: darkred; }
+  </style>
+</head>
+<body>
+
+<h1>Welcome to Ms. Balaji Jules</h1>
+
+<div id="startPage" class="box">
+  <button onclick="employeeFlow()">I am Employee</button>
+  <button onclick="notEmployeeFlow()">I am Not Employee</button>
+</div>
+
+<div id="codePage" class="box hidden">
+  <h2>Enter Employee Code</h2>
+  <input id="employeeCode" type="password" placeholder="Employee Code">
+  <button onclick="checkEmployeeCode()">Submit</button>
+</div>
+
+<div id="employeePage" class="box hidden">
+  <h2>Add Items to List</h2>
+  <input id="itemName" placeholder="Item Name">
+  <input id="itemPrice" type="number" placeholder="Price">
+  <button onclick="addItem()">Add Item</button>
+
+  <h3>Current Listings</h3>
+  <table id="listingTable">
+    <thead><tr><th>Name</th><th>Price</th><th>Action</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Submitted Orders</h3>
+  <table id="employeeOrdersTable">
+    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <button onclick="backToStart()">Back to Start</button>
+  <hr>
+  <button onclick="exportData()">Export Data</button>
+  <input type="file" id="importFile" onchange="importData(event)">
+</div>
+
+<div id="orderPage" class="box hidden">
+  <h2>Place Your Order</h2>
+  <table id="orderTable">
+    <thead><tr><th>Name</th><th>Price</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <input id="orderName" placeholder="Your Name">
+  <input id="orderQty" type="number" placeholder="Quantity">
+  <select id="orderItem"></select>
+  <button onclick="submitOrder()">Submit Order</button>
+  <p id="orderMessage"></p>
+  <button onclick="backToStart()">Back to Start</button>
+</div>
+
+<script>
+let isEmployee = false;
+
+// --- Navigation ---
+function employeeFlow() {
+  isEmployee = true;
+  document.getElementById("startPage").style.display = "none";
+  document.getElementById("codePage").style.display = "block";
+}
+
+function notEmployeeFlow() {
+  isEmployee = false;
+  document.getElementById("startPage").style.display = "none";
+  document.getElementById("orderPage").style.display = "block";
+  updateOrderTable();
+}
+
+// --- Employee code ---
+function checkEmployeeCode() {
+  const code = document.getElementById("employeeCode").value;
+  if(code === "10203040") {
+    document.getElementById("codePage").style.display = "none";
+    document.getElementById("employeePage").style.display = "block";
+    updateListingTable();
+    updateEmployeeOrdersTable();
+    populateOrderSelect();
+  } else {
+    alert("Incorrect code. Try again.");
+  }
+}
+
+// --- Items ---
+function addItem() {
+  const name = document.getElementById("itemName").value;
+  const price = parseFloat(document.getElementById("itemPrice").value);
+  if(!name || isNaN(price)) { alert("Fill both fields"); return; }
+
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  items.push({name, price});
+  localStorage.setItem("items", JSON.stringify(items));
+
+  document.getElementById("itemName").value = "";
+  document.getElementById("itemPrice").value = "";
+  updateListingTable();
+  populateOrderSelect();
+}
+
+function deleteItem(index) {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  items.splice(index, 1);
+  localStorage.setItem("items", JSON.stringify(items));
+  updateListingTable();
+  populateOrderSelect();
+}
+
+function updateListingTable() {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let tbody = document.querySelector("#listingTable tbody");
+  tbody.innerHTML = "";
+  items.forEach((i,index) => {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${i.name}</td><td>$${i.price.toFixed(2)}</td><td><button class="deleteBtn" onclick="deleteItem(${index})">Delete</button></td>`;
+    tbody.appendChild(row);
+  });
+}
+
+function populateOrderSelect() {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let select = document.getElementById("orderItem");
+  if (!select) return;
+  select.innerHTML = "";
+  items.forEach((i,index) => {
+    let opt = document.createElement("option");
+    opt.value = index;
+    opt.text = i.name + " ($" + i.price.toFixed(2) + ")";
+    select.add(opt);
+  });
+}
+
+// --- Non-employee ---
+function updateOrderTable() {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let tbody = document.querySelector("#orderTable tbody");
+  tbody.innerHTML = "";
+  items.forEach(i => {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${i.name}</td><td>$${i.price.toFixed(2)}</td>`;
+    tbody.appendChild(row);
+  });
+  populateOrderSelect();
+}
+
+// --- Orders ---
+function updateEmployeeOrdersTable() {
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  let tbody = document.querySelector("#employeeOrdersTable tbody");
+  tbody.innerHTML = "";
+  orders.forEach(o => {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>`;
+    tbody.appendChild(row);
+  });
+}
+
+// --- Submit order ---
+function submitOrder() {
+  const name = document.getElementById("orderName").value;
+  const qty = parseInt(document.getElementById("orderQty").value);
+  const itemIndex = document.getElementById("orderItem").value;
+
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  if(!name || !qty || itemIndex === "") { alert("Fill all fields"); return; }
+
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  orders.push({
+    customer: name,
+    item: items[itemIndex].name,
+    quantity: qty
+  });
+  localStorage.setItem("orders", JSON.stringify(orders));
+
+  document.getElementById("orderMessage").innerText = "Send money to WI3 and come to WI3 for your order.";
+
+  document.getElementById("orderName").value = "";
+  document.getElementById("orderQty").value = "";
+
+  if(isEmployee) updateEmployeeOrdersTable();
+}
+
+// --- Export / Import ---
+function exportData() {
+  const data = {
+    items: JSON.parse(localStorage.getItem("items") || "[]"),
+    orders: JSON.parse(localStorage.getItem("orders") || "[]")
+  };
+  const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tre_data.json";
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = JSON.parse(e.target.result);
+    localStorage.setItem("items", JSON.stringify(data.items || []));
+    localStorage.setItem("orders", JSON.stringify(data.orders || []));
+    updateListingTable();
+    updateOrderTable();
+    updateEmployeeOrdersTable();
+    populateOrderSelect();
+  };
+  reader.readAsText(file);
+}
+
+// --- Back to start ---
+function backToStart() {
+  document.getElementById("startPage").style.display = "block";
+  document.getElementById("codePage").style.display = "none";
+  document.getElementById("employeePage").style.display = "none";
+  document.getElementById("orderPage").style.display = "none";
+  document.getElementById("orderMessage").innerText = "";
+}
+</script>
+
+</body>
+</html>
