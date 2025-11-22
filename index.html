@@ -32,6 +32,7 @@
   <h2>Enter Employee Code</h2>
   <input id="employeeCode" type="password" placeholder="Employee Code">
   <button onclick="checkEmployeeCode()">Submit</button>
+  <button onclick="backToStart()">Back</button>
 </div>
 
 <!-- EMPLOYEE DASHBOARD -->
@@ -53,7 +54,7 @@
     <tbody></tbody>
   </table>
 
-  <button onclick="backToStart()">Back to Start</button>
+  <button onclick="backToStart()">Back</button>
 </div>
 
 <!-- CUSTOMER ORDER PAGE -->
@@ -73,17 +74,25 @@
     <tbody></tbody>
   </table>
 
-  <button onclick="backToStart()">Back to Start</button>
+  <button onclick="backToStart()">Back</button>
 </div>
 
-<!-- MANAGER PAGE -->
+<!-- MANAGER LOGIN PAGE -->
+<div id="managerLoginPage" class="box hidden">
+  <h2>Enter Manager Password</h2>
+  <input id="managerPassword" type="password" placeholder="Manager Password">
+  <button onclick="checkManagerPassword()">Submit</button>
+  <button onclick="backToStart()">Back</button>
+</div>
+
+<!-- MANAGER DASHBOARD PAGE -->
 <div id="managerPage" class="box hidden">
   <h2>Employee Requests</h2>
   <table id="managerTable">
     <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
     <tbody></tbody>
   </table>
-  <button onclick="backToStart()">Back to Start</button>
+  <button onclick="backToStart()">Back</button>
 </div>
 
 <script>
@@ -91,7 +100,7 @@ let isEmployee = false;
 
 // --- PAGE NAVIGATION ---
 function showPage(pageId) {
-  ['startPage','codePage','employeePage','orderPage','managerPage'].forEach(id => {
+  ['startPage','codePage','employeePage','orderPage','managerLoginPage','managerPage'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
   document.getElementById(pageId).style.display = 'block';
@@ -111,14 +120,16 @@ function notEmployeeFlow() {
 }
 
 function managerFlow() {
-  showPage('managerPage');
-  updateManagerTable();
+  showPage('managerLoginPage');
 }
 
+// Clears fields and goes back
 function backToStart() {
   showPage('startPage');
   document.getElementById("orderMessage").innerText = "";
   document.getElementById("applyMessage").innerText = "";
+  document.getElementById("employeeCode").value = "";
+  document.getElementById("managerPassword").value = "";
 }
 
 // --- EMPLOYEE LOGIN ---
@@ -132,6 +143,17 @@ function checkEmployeeCode() {
     populateOrderSelect();
   } else {
     alert("Incorrect code. Try again.");
+  }
+}
+
+// --- MANAGER LOGIN ---
+function checkManagerPassword() {
+  const pwd = document.getElementById("managerPassword").value;
+  if(pwd === "manageristhebest1234") {
+    showPage('managerPage');
+    updateManagerTable();
+  } else {
+    alert("Incorrect manager password!");
   }
 }
 
@@ -309,6 +331,8 @@ window.onload = function() {
     } else if(savedPage === 'orderPage') {
       updateOrderTable();
       populateOrderSelect();
+    } else if(savedPage === 'managerLoginPage') {
+      // nothing special
     } else if(savedPage === 'managerPage') {
       updateManagerTable();
     }
