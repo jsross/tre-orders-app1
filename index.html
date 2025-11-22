@@ -123,7 +123,6 @@ function managerFlow() {
   showPage('managerLoginPage');
 }
 
-// Clears fields and goes back
 function backToStart() {
   showPage('startPage');
   document.getElementById("orderMessage").innerText = "";
@@ -136,12 +135,22 @@ function backToStart() {
 function checkEmployeeCode() {
   const code = document.getElementById("employeeCode").value;
   const codes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
-  if(Object.values(codes).includes(code)) {
+  const requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+
+  let employeeName = Object.keys(codes).find(name => codes[name] === code);
+
+  if(employeeName) {
     showPage('employeePage');
     updateListingTable();
     updateEmployeeOrdersTable();
     populateOrderSelect();
   } else {
+    // Check if user was fired
+    let firedName = Object.keys(requests).find(name => requests[name] === 'fired');
+    if(firedName) {
+      alert("Sorry, but you were fired.");
+      return;
+    }
     alert("Incorrect code. Try again.");
   }
 }
@@ -292,15 +301,29 @@ function applyForEmployee() {
   document.getElementById("applyMessage").innerText = "Application submitted! Wait for manager approval.";
 }
 
-// --- MANAGER APPROVAL ---
+// --- MANAGER APPROVAL, FIRE, CHANGE CODE ---
 function updateManagerTable() {
   let requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+  let employeeCodes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
   let tbody = document.querySelector("#managerTable tbody");
   tbody.innerHTML = "";
-  for(let name in requests) {
+
+  for (let name in requests) {
     let row = document.createElement("tr");
-    row.innerHTML = `<td>${name}</td><td>${requests[name]}</td>
-                     <td>${requests[name]==='pending' ? `<button onclick="approveEmployee('${name}')">Approve</button>` : ''}</td>`;
+    let actionHTML = "";
+
+    if (requests[name] === 'pending') {
+      actionHTML = `<button onclick="approveEmployee('${name}')">Approve</button>`;
+    } else if (requests[name] === 'approved') {
+      actionHTML = `
+        <button onclick="fireEmployee('${name}')">Fire</button>
+        <button onclick="changeEmployeeCode('${name}')">Change Code</button>
+      `;
+    } else if (requests[name] === 'fired') {
+      actionHTML = "Fired";
+    }
+
+    row.innerHTML = `<td>${name}</td><td>${requests[name]}</td><td>${actionHTML}</td>`;
     tbody.appendChild(row);
   }
 }
@@ -319,6 +342,33 @@ function approveEmployee(name) {
   updateManagerTable();
 }
 
+function fireEmployee(name) {
+  if(!confirm(`Are you sure you want to fire ${name}?`)) return;
+
+  let requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+  let employeeCodes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
+
+  delete employeeCodes[name];
+  requests[name] = 'fired';
+
+  localStorage.setItem("employeeCodes", JSON.stringify(employeeCodes));
+  localStorage.setItem("jobRequests", JSON.stringify(requests));
+
+  alert(`${name} has been fired.`);
+  updateManagerTable();
+}
+
+function changeEmployeeCode(name) {
+  if(!confirm(`Are you sure you want to change ${name}'s employee code?`)) return;
+
+  let employeeCodes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
+  let newCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+  employeeCodes[name] = newCode;
+  localStorage.setItem("employeeCodes", JSON.stringify(employeeCodes));
+
+  alert(`${name}'s new employee code is: ${newCode}`);
+}
+
 // --- ON PAGE LOAD ---
 window.onload = function() {
   const savedPage = localStorage.getItem('currentPage');
@@ -331,8 +381,6 @@ window.onload = function() {
     } else if(savedPage === 'orderPage') {
       updateOrderTable();
       populateOrderSelect();
-    } else if(savedPage === 'managerLoginPage') {
-      // nothing special
     } else if(savedPage === 'managerPage') {
       updateManagerTable();
     }
