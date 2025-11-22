@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ms. Balaji Jules Orders</title>
-  <style>
-    body{font-family:Arial;background:#f4f4f4;text-align:center;margin:0;padding:0}
-    h1{background:#333;color:white;padding:20px;margin:0}
-    .box{width:90%;max-width:600px;background:white;margin:30px auto;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
-    input,button,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #aaa}
-    button{background:#333;color:white;border:none;cursor:pointer}
-    button:hover{background:#555}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border:1px solid #aaa;padding:8px;text-align:left}
-    .deleteBtn{background:red;color:white;padding:4px 8px;border-radius:4px;font-size:12px;cursor:pointer}
-    .deleteBtn:hover{background:darkred}
-    .hidden{display:none}
-  </style>
+<title>Ms. Balaji Jules Orders</title>
+<style>
+  body{font-family:Arial;background:#f4f4f4;text-align:center;margin:0;padding:0}
+  h1{background:#333;color:white;padding:20px;margin:0}
+  .box{width:90%;max-width:600px;background:white;margin:30px auto;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
+  input,button,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #aaa}
+  button{background:#333;color:white;border:none;cursor:pointer}
+  button:hover{background:#555}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border:1px solid #aaa;padding:8px;text-align:left}
+  .deleteBtn{background:red;color:white;padding:4px 8px;border-radius:4px;font-size:12px;cursor:pointer}
+  .deleteBtn:hover{background:darkred}
+</style>
 </head>
 <body>
 
-<h1>Welcome to Ms. Balaji Jules Orders</h1>
+<h1>Ms. Balaji Jules Orders</h1>
 
 <!-- START -->
 <div id="startPage" class="box">
@@ -28,7 +27,7 @@
 </div>
 
 <!-- EMPLOYEE LOGIN -->
-<div id="codePage" class="box hidden">
+<div id="codePage" class="box" style="display:none">
   <h2>Enter Employee Code</h2>
   <input id="employeeCode" type="password">
   <button onclick="checkEmployeeCode()">Submit</button>
@@ -36,7 +35,7 @@
 </div>
 
 <!-- EMPLOYEE PAGE -->
-<div id="employeePage" class="box hidden">
+<div id="employeePage" class="box" style="display:none">
   <h2>Add Items</h2>
   <input id="itemName" placeholder="Item Name">
   <input id="itemPrice" type="number" placeholder="Price">
@@ -48,11 +47,12 @@
   <h3>Orders</h3>
   <table id="employeeOrdersTable"><tbody></tbody></table>
 
+  <button onclick="quitJob()" style="background:#c00;margin-top:10px">Quit Job</button>
   <button onclick="backToStart()">Back</button>
 </div>
 
 <!-- CUSTOMER ORDER PAGE -->
-<div id="orderPage" class="box hidden">
+<div id="orderPage" class="box" style="display:none">
   <h2>Place Order</h2>
   <input id="orderName" placeholder="Your Name">
   <input id="orderQty" type="number" placeholder="Qty">
@@ -69,59 +69,120 @@
 </div>
 
 <!-- MANAGER LOGIN -->
-<div id="managerLoginPage" class="box hidden">
-  <h2>Manager Password</h2>
-  <input id="managerPassword" type="password">
-  <button onclick="checkManagerPassword()">Submit</button>
+<div id="managerLoginPage" class="box" style="display:none">
+  <h2>Manager Login</h2>
+  <input id="managerUser" placeholder="Username">
+  <input id="managerPassword" type="password" placeholder="Password">
+  <button onclick="checkManagerLogin()">Login</button>
   <button onclick="backToStart()">Back</button>
 </div>
 
 <!-- MANAGER PAGE -->
-<div id="managerPage" class="box hidden">
+<div id="managerPage" class="box" style="display:none">
   <h2>Employee Requests</h2>
-  <table id="managerTable"><tbody></tbody></table>
+  <table id="managerTable">
+    <thead><tr><th>Name</th><th>Status</th><th>Code</th><th>Actions</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <button onclick="showPage('managerSettingsPage')" style="margin-top:10px">Manager Settings</button>
   <button onclick="backToStart()">Back</button>
 </div>
 
-<script>
-let isEmployee=false;
+<!-- MANAGER SETTINGS PAGE -->
+<div id="managerSettingsPage" class="box" style="display:none">
+  <h2>Manager Settings</h2>
 
+  <h3>Change Username</h3>
+  <input id="newManagerUser" placeholder="New Username">
+  <button onclick="changeManagerUser()">Save Username</button>
+
+  <h3>Change Password</h3>
+  <input id="newManagerPass" placeholder="New Password" type="password">
+  <button onclick="changeManagerPass()">Save Password</button>
+
+  <h3>Danger Zone</h3>
+  <button onclick="resetAll()" style="background:red">RESET EVERYTHING</button>
+
+  <button onclick="showPage('managerPage')" style="margin-top:10px">Back</button>
+</div>
+
+<script>
+/* ------------------ MANAGER LOGIN SETTINGS ------------------ */
+let managerCredentials = JSON.parse(localStorage.getItem("managerCredentials") || `{
+  "username": "admin",
+  "password": "manageristhebest1234"
+}`);
+
+/* ------------------ PAGE SWITCHING ------------------ */
 function showPage(p){
-  ["startPage","codePage","employeePage","orderPage","managerLoginPage","managerPage"].forEach(id=>{
-    document.getElementById(id).style.display="none";
-  });
+  ["startPage","codePage","employeePage","orderPage","managerLoginPage","managerPage","managerSettingsPage"]
+    .forEach(id=>document.getElementById(id).style.display="none");
   document.getElementById(p).style.display="block";
   localStorage.setItem("currentPage",p);
 }
 
-function employeeFlow(){isEmployee=true;showPage("codePage")}
-function notEmployeeFlow(){isEmployee=false;showPage("orderPage");updateOrderTable();populateOrderSelect()}
+/* ------------------ START FLOWS ------------------ */
+function employeeFlow(){showPage("codePage")}
+function notEmployeeFlow(){showPage("orderPage");updateOrderTable();populateOrderSelect()}
 function managerFlow(){showPage("managerLoginPage")}
 function backToStart(){showPage("startPage")}
 
-function checkEmployeeCode(){
-  const code=document.getElementById("employeeCode").value;
-  const codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+/* ------------------ MANAGER LOGIN ------------------ */
+function checkManagerLogin(){
+  let u=managerUser.value.trim();
+  let p=managerPassword.value.trim();
 
-  let emp=Object.keys(codes).find(n=>codes[n]===code);
-  if(!emp){alert("Wrong code.");return;}
+  if(u===managerCredentials.username && p===managerCredentials.password){
+    showPage("managerPage");
+    updateManagerTable();
+  } else alert("Incorrect username or password.");
+}
+
+/* ------------------ MANAGER SETTINGS ------------------ */
+function changeManagerUser(){
+  let nu=newManagerUser.value.trim();
+  if(!nu) return alert("Enter username");
+  managerCredentials.username=nu;
+  localStorage.setItem("managerCredentials",JSON.stringify(managerCredentials));
+  alert("Username updated.");
+}
+
+function changeManagerPass(){
+  let np=newManagerPass.value.trim();
+  if(!np) return alert("Enter password");
+  managerCredentials.password=np;
+  localStorage.setItem("managerCredentials",JSON.stringify(managerCredentials));
+  alert("Password updated.");
+}
+
+function resetAll(){
+  if(!confirm("RESET ALL DATA? This cannot be undone!")) return;
+  localStorage.clear();
+  location.reload();
+}
+
+/* ------------------ EMPLOYEE LOGIN ------------------ */
+function checkEmployeeCode(){
+  let code = employeeCode.value;
+  let codes = JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+
+  let name = Object.keys(codes).find(x=>codes[x]===code);
+  if(!name){alert("Wrong code");return;}
 
   showPage("employeePage");
   updateListingTable();updateEmployeeOrdersTable();populateOrderSelect();
 }
 
-function checkManagerPassword(){
-  if(document.getElementById("managerPassword").value==="manageristhebest1234"){
-    showPage("managerPage");updateManagerTable();
-  } else alert("Wrong password");
-}
-
+/* ------------------ ITEMS ------------------ */
 function addItem(){
-  let n=itemName.value.trim(), p=parseFloat(itemPrice.value);
-  if(!n||isNaN(p)){alert("Fill both");return;}
+  let name=itemName.value.trim(), price=parseFloat(itemPrice.value);
+  if(!name||isNaN(price)) return alert("Fill both fields");
+
   let items=JSON.parse(localStorage.getItem("items")||"[]");
-  items.push({name:n,price:p});
+  items.push({name,price});
   localStorage.setItem("items",JSON.stringify(items));
+
   itemName.value="";itemPrice.value="";
   updateListingTable();populateOrderSelect();
 }
@@ -137,51 +198,47 @@ function updateListingTable(){
   let items=JSON.parse(localStorage.getItem("items")||"[]");
   let tb=document.querySelector("#listingTable tbody");
   tb.innerHTML="";
-  items.forEach((x,i)=>{
-    tb.innerHTML+=`<tr><td>${x.name}</td><td>$${x.price}</td>
-      <td><button class='deleteBtn' onclick='deleteItem(${i})'>X</button></td></tr>`;
-  });
+  items.forEach((x,i)=>tb.innerHTML+=
+    `<tr><td>${x.name}</td><td>$${x.price}</td><td><button class="deleteBtn" onclick="deleteItem(${i})">X</button></td></tr>`
+  );
 }
 
+/* ------------------ ORDERING ------------------ */
 function populateOrderSelect(){
   let items=JSON.parse(localStorage.getItem("items")||"[]");
-  let s=document.getElementById("orderItem");
-  if(!s)return;
-  s.innerHTML="";
-  items.forEach((x,i)=>{
-    s.innerHTML+=`<option value='${i}'>${x.name} ($${x.price})</option>`;
-  });
+  orderItem.innerHTML="";
+  items.forEach((x,i)=>orderItem.innerHTML+=`<option value="${i}">${x.name} ($${x.price})</option>`);
 }
 
-function updateEmployeeOrdersTable(){
+function submitOrder(){
+  let name=orderName.value.trim(), qty=parseInt(orderQty.value);
+  let idx=orderItem.value;
+  let items=JSON.parse(localStorage.getItem("items")||"[]");
+
+  if(!name||!qty||idx==="") return alert("Fill all fields");
+
   let orders=JSON.parse(localStorage.getItem("orders")||"[]");
-  let tb=document.querySelector("#employeeOrdersTable tbody");
-  tb.innerHTML="";
-  orders.forEach((o,i)=>{
-    tb.innerHTML+=`<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>
-      <td><button class='deleteBtn' onclick='deleteOrder(${i})'>X</button></td></tr>`;
-  });
+  orders.push({customer:name,item:items[idx].name,quantity:qty});
+  localStorage.setItem("orders",JSON.stringify(orders));
+
+  orderName.value="";orderQty.value="";
+  updateOrderTable();updateEmployeeOrdersTable();
 }
 
 function updateOrderTable(){
   let orders=JSON.parse(localStorage.getItem("orders")||"[]");
-  let tb=document.querySelector("#orderTable tbody");
-  tb.innerHTML="";
-  orders.forEach(o=>{
-    tb.innerHTML+=`<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td></tr>`;
-  });
+  orderTable.querySelector("tbody").innerHTML =
+    orders.map(o=>`<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td></tr>`).join("");
 }
 
-function submitOrder(){
-  let name=orderName.value.trim(), qty=parseInt(orderQty.value), idx=orderItem.value;
-  let items=JSON.parse(localStorage.getItem("items")||"[]");
-  if(!name||!qty||idx===""){alert("Fill all");return;}
+/* ------------------ EMPLOYEE ORDERS ------------------ */
+function updateEmployeeOrdersTable(){
   let orders=JSON.parse(localStorage.getItem("orders")||"[]");
-  orders.push({customer:name,item:items[idx].name,quantity:qty});
-  localStorage.setItem("orders",JSON.stringify(orders));
-  orderName.value="";orderQty.value="";
-  updateOrderTable();updateEmployeeOrdersTable();
-  orderMessage.textContent="Order saved.";
+  employeeOrdersTable.querySelector("tbody").innerHTML =
+    orders.map((o,i)=>
+      `<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>
+      <td><button class="deleteBtn" onclick="deleteOrder(${i})">X</button></td></tr>`
+    ).join("");
 }
 
 function deleteOrder(i){
@@ -191,70 +248,109 @@ function deleteOrder(i){
   updateOrderTable();updateEmployeeOrdersTable();
 }
 
+/* ------------------ APPLY FOR JOB ------------------ */
 function applyForEmployee(){
-  let n=orderName.value.trim();
-  if(!n){alert("Enter name");return;}
+  let name=orderName.value.trim();
+  if(!name) return alert("Enter your name");
+
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
+  if(req[name]==="pending"||req[name]==="approved")
+    return applyMessage.textContent="Already applied.";
 
-  if(req[n]==="pending"||req[n]==="approved"){
-    applyMessage.textContent="Already applied.";
-    return;
-  }
-
-  req[n]="pending";
+  req[name]="pending";
   localStorage.setItem("jobRequests",JSON.stringify(req));
   applyMessage.textContent="Application sent!";
 }
 
+/* ------------------ MANAGER TABLE ------------------ */
 function updateManagerTable(){
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
+  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+
   let tb=document.querySelector("#managerTable tbody");
   tb.innerHTML="";
-  for(let n in req){
-    let a="";
-    if(req[n]==="pending") a=`<button onclick="approveEmployee('${n}')">Approve</button>`;
-    if(req[n]==="approved") a=`<button onclick="fireEmployee('${n}')">Fire</button>`;
-    tb.innerHTML+=`<tr><td>${n}</td><td>${req[n]}</td><td>${a}</td></tr>`;
+
+  for(let name in req){
+    let status=req[name];
+    let code=codes[name]||"—";
+    let actions="";
+
+    if(status==="pending")
+      actions=`<button onclick="approveEmployee('${name}')">Approve</button>`;
+    else if(status==="approved")
+      actions=`<button onclick="fireEmployee('${name}')">Fire</button>`;
+
+    let copyBtn = code!=="—" ? `<button onclick="copyCode('${code}')">Copy</button>` : "";
+
+    tb.innerHTML+=`
+      <tr>
+        <td>${name}</td>
+        <td>${status}</td>
+        <td>${code} ${copyBtn}</td>
+        <td>${actions}</td>
+      </tr>`;
   }
 }
 
-function approveEmployee(n){
-  let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
-  req[n]="approved";
-  localStorage.setItem("jobRequests",JSON.stringify(req));
-
-  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
-  codes[n]=(Math.floor(10000000+Math.random()*90000000)).toString();
-  localStorage.setItem("employeeCodes",JSON.stringify(codes));
-
-  alert(n+" approved.");
-  updateManagerTable();
+/* ------------------ COPY CODE ------------------ */
+function copyCode(code){
+  navigator.clipboard.writeText(code);
+  alert("Copied: "+code);
 }
 
-function fireEmployee(n){
-  if(!confirm("Fire "+n+"?"))return;
-
+/* ------------------ APPROVE / FIRE / QUIT ------------------ */
+function approveEmployee(name){
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
-  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+  req[name]="approved";
 
-  delete req[n];  
-  delete codes[n];
+  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+  codes[name]=(Math.floor(10000000+Math.random()*90000000)).toString();
 
   localStorage.setItem("jobRequests",JSON.stringify(req));
   localStorage.setItem("employeeCodes",JSON.stringify(codes));
 
-  alert(n+" fired.");
   updateManagerTable();
+  alert(name+"'s employee code: "+codes[name]);
 }
 
+function fireEmployee(name){
+  if(!confirm("Fire "+name+"?")) return;
+
+  let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
+  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+
+  delete req[name];
+  delete codes[name];
+
+  localStorage.setItem("jobRequests",JSON.stringify(req));
+  localStorage.setItem("employeeCodes",JSON.stringify(codes));
+
+  updateManagerTable();
+  alert(name+" fired.");
+}
+
+function quitJob(){
+  let code=employeeCode.value;
+  let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
+  let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
+
+  let name=Object.keys(codes).find(n=>codes[n]===code);
+  if(!name) return alert("Error: employee not found");
+
+  delete codes[name];
+  req[name]="quit_pending";
+
+  localStorage.setItem("employeeCodes",JSON.stringify(codes));
+  localStorage.setItem("jobRequests",JSON.stringify(req));
+
+  alert("You quit your job.");
+  showPage("startPage");
+}
+
+/* ------------------ LOAD LAST PAGE ------------------ */
 window.onload=function(){
-  let p=localStorage.getItem("currentPage")||"startPage";
-  showPage(p);
-  if(p==="employeePage"){updateListingTable();updateEmployeeOrdersTable();populateOrderSelect()}
-  if(p==="orderPage"){updateOrderTable();populateOrderSelect()}
-  if(p==="managerPage")updateManagerTable();
+  showPage(localStorage.getItem("currentPage")||"startPage");
 }
 </script>
-
 </body>
 </html>
