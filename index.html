@@ -3,16 +3,16 @@
 <head>
 <title>Ms. Balaji Jules Orders</title>
 <style>
-  body{font-family:Arial;background:#f4f4f4;text-align:center;margin:0;padding:0}
-  h1{background:#333;color:white;padding:20px;margin:0}
-  .box{width:90%;max-width:600px;background:white;margin:30px auto;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
-  input,button,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #aaa}
-  button{background:#333;color:white;border:none;cursor:pointer}
-  button:hover{background:#555}
-  table{width:100%;border-collapse:collapse;margin-top:10px}
-  th,td{border:1px solid #aaa;padding:8px;text-align:left}
-  .deleteBtn{background:red;color:white;padding:4px 8px;border-radius:4px;font-size:12px;cursor:pointer}
-  .deleteBtn:hover{background:darkred}
+body{font-family:Arial;background:#f4f4f4;text-align:center;margin:0;padding:0}
+h1{background:#333;color:white;padding:20px;margin:0}
+.box{width:90%;max-width:600px;background:white;margin:30px auto;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
+input,button,select{width:100%;padding:10px;margin:5px 0;border-radius:6px;border:1px solid #aaa}
+button{background:#333;color:white;border:none;cursor:pointer}
+button:hover{background:#555}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #aaa;padding:8px;text-align:left}
+.deleteBtn{background:red;color:white;padding:4px 8px;border-radius:4px;font-size:12px;cursor:pointer}
+.deleteBtn:hover{background:darkred}
 </style>
 </head>
 <body>
@@ -53,10 +53,13 @@
 
 <!-- CUSTOMER ORDER PAGE -->
 <div id="orderPage" class="box" style="display:none">
-  <h2>Place Order</h2>
+  <h2>Place Your Order</h2>
   <input id="orderName" placeholder="Your Name">
-  <input id="orderQty" type="number" placeholder="Qty">
-  <select id="orderItem"></select>
+
+  <h3>Select Items to Order</h3>
+  <div id="orderItemsContainer"></div>
+  <p>Total: $<span id="orderTotal">0.00</span></p>
+
   <button onclick="submitOrder()">Submit Order</button>
   <button onclick="applyForEmployee()">Apply for Employee</button>
   <p id="orderMessage"></p>
@@ -102,7 +105,7 @@
   <button onclick="changeManagerPass()">Save Password</button>
 
   <h3>Danger Zone</h3>
-  <button onclick="resetAll()" style="background:red">RESET EVERYTHING</button>
+  <button onclick="resetApp()" style="background:red">RESET APP (Keeps Employees, Jobs, Items, Orders)</button>
 
   <button onclick="showPage('managerPage')" style="margin-top:10px">Back</button>
 </div>
@@ -132,7 +135,6 @@ function backToStart(){showPage("startPage")}
 function checkManagerLogin(){
   let u=managerUser.value.trim();
   let p=managerPassword.value.trim();
-
   if(u===managerCredentials.username && p===managerCredentials.password){
     showPage("managerPage");
     updateManagerTable();
@@ -156,9 +158,23 @@ function changeManagerPass(){
   alert("Password updated.");
 }
 
-function resetAll(){
-  if(!confirm("RESET ALL DATA? This cannot be undone!")) return;
+/* ------------------ SAFE RESET ------------------ */
+function resetApp() {
+  if (!confirm("Are you sure you want to reset?")) return;
+
+  const savedEmployeeCodes = localStorage.getItem("employeeCodes");
+  const savedJobRequests = localStorage.getItem("jobRequests");
+  const savedItems = localStorage.getItem("items");
+  const savedOrders = localStorage.getItem("orders");
+
   localStorage.clear();
+
+  if (savedEmployeeCodes) localStorage.setItem("employeeCodes", savedEmployeeCodes);
+  if (savedJobRequests) localStorage.setItem("jobRequests", savedJobRequests);
+  if (savedItems) localStorage.setItem("items", savedItems);
+  if (savedOrders) localStorage.setItem("orders", savedOrders);
+
+  alert("App reset. Employees, jobs, items, and orders were kept.");
   location.reload();
 }
 
@@ -166,10 +182,8 @@ function resetAll(){
 function checkEmployeeCode(){
   let code = employeeCode.value;
   let codes = JSON.parse(localStorage.getItem("employeeCodes")||"{}");
-
   let name = Object.keys(codes).find(x=>codes[x]===code);
   if(!name){alert("Wrong code");return;}
-
   showPage("employeePage");
   updateListingTable();updateEmployeeOrdersTable();populateOrderSelect();
 }
@@ -178,11 +192,9 @@ function checkEmployeeCode(){
 function addItem(){
   let name=itemName.value.trim(), price=parseFloat(itemPrice.value);
   if(!name||isNaN(price)) return alert("Fill both fields");
-
   let items=JSON.parse(localStorage.getItem("items")||"[]");
   items.push({name,price});
   localStorage.setItem("items",JSON.stringify(items));
-
   itemName.value="";itemPrice.value="";
   updateListingTable();populateOrderSelect();
 }
@@ -203,42 +215,81 @@ function updateListingTable(){
   );
 }
 
-/* ------------------ ORDERING ------------------ */
-function populateOrderSelect(){
-  let items=JSON.parse(localStorage.getItem("items")||"[]");
-  orderItem.innerHTML="";
-  items.forEach((x,i)=>orderItem.innerHTML+=`<option value="${i}">${x.name} ($${x.price})</option>`);
+/* ------------------ ORDERING MULTIPLE ITEMS ------------------ */
+function populateOrderSelect() {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let container = document.getElementById("orderItemsContainer");
+  container.innerHTML = "";
+  items.forEach((item, index) => {
+    let div = document.createElement("div");
+    div.innerHTML = `
+      <input type="checkbox" id="item${index}" value="${index}" onchange="updateOrderTotal()">
+      <label for="item${index}">${item.name} ($${item.price.toFixed(2)})</label>
+    `;
+    container.appendChild(div);
+  });
+  updateOrderTotal();
 }
 
-function submitOrder(){
-  let name=orderName.value.trim(), qty=parseInt(orderQty.value);
-  let idx=orderItem.value;
-  let items=JSON.parse(localStorage.getItem("items")||"[]");
-
-  if(!name||!qty||idx==="") return alert("Fill all fields");
-
-  let orders=JSON.parse(localStorage.getItem("orders")||"[]");
-  orders.push({customer:name,item:items[idx].name,quantity:qty});
-  localStorage.setItem("orders",JSON.stringify(orders));
-
-  orderName.value="";orderQty.value="";
-  updateOrderTable();updateEmployeeOrdersTable();
+function updateOrderTotal() {
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let total = 0;
+  items.forEach((item, index) => {
+    let checkbox = document.getElementById("item" + index);
+    if (checkbox && checkbox.checked) total += item.price;
+  });
+  document.getElementById("orderTotal").innerText = total.toFixed(2);
 }
 
-function updateOrderTable(){
-  let orders=JSON.parse(localStorage.getItem("orders")||"[]");
+function submitOrder() {
+  let name = document.getElementById("orderName").value.trim();
+  if (!name) return alert("Enter your name");
+
+  let items = JSON.parse(localStorage.getItem("items") || "[]");
+  let selectedItems = [];
+  items.forEach((item, index) => {
+    let checkbox = document.getElementById("item" + index);
+    if (checkbox && checkbox.checked) selectedItems.push(item.name);
+  });
+  if (selectedItems.length === 0) return alert("Select at least one item");
+
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  orders.push({
+    customer: name,
+    items: selectedItems,
+    total: selectedItems.reduce((sum, itemName) => {
+      let i = items.find(i => i.name === itemName);
+      return sum + (i ? i.price : 0);
+    }, 0)
+  });
+  localStorage.setItem("orders", JSON.stringify(orders));
+
+  alert("Order submitted! Total: $" + orders[orders.length - 1].total.toFixed(2));
+  document.getElementById("orderName").value = "";
+  populateOrderSelect();
+  updateOrderTable();
+  updateEmployeeOrdersTable();
+}
+
+function updateOrderTable() {
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
   orderTable.querySelector("tbody").innerHTML =
-    orders.map(o=>`<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td></tr>`).join("");
+    orders.map(o => `<tr>
+      <td>${o.customer}</td>
+      <td>${o.items.join(", ")}</td>
+      <td>$${o.total.toFixed(2)}</td>
+    </tr>`).join("");
 }
 
-/* ------------------ EMPLOYEE ORDERS ------------------ */
-function updateEmployeeOrdersTable(){
-  let orders=JSON.parse(localStorage.getItem("orders")||"[]");
+function updateEmployeeOrdersTable() {
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
   employeeOrdersTable.querySelector("tbody").innerHTML =
-    orders.map((o,i)=>
-      `<tr><td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>
-      <td><button class="deleteBtn" onclick="deleteOrder(${i})">X</button></td></tr>`
-    ).join("");
+    orders.map((o, i) => `<tr>
+      <td>${o.customer}</td>
+      <td>${o.items.join(", ")}</td>
+      <td>$${o.total.toFixed(2)}</td>
+      <td><button class="deleteBtn" onclick="deleteOrder(${i})">X</button></td>
+    </tr>`).join("");
 }
 
 function deleteOrder(i){
@@ -252,11 +303,9 @@ function deleteOrder(i){
 function applyForEmployee(){
   let name=orderName.value.trim();
   if(!name) return alert("Enter your name");
-
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
   if(req[name]==="pending"||req[name]==="approved")
     return applyMessage.textContent="Already applied.";
-
   req[name]="pending";
   localStorage.setItem("jobRequests",JSON.stringify(req));
   applyMessage.textContent="Application sent!";
@@ -266,22 +315,15 @@ function applyForEmployee(){
 function updateManagerTable(){
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
   let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
-
   let tb=document.querySelector("#managerTable tbody");
   tb.innerHTML="";
-
   for(let name in req){
     let status=req[name];
     let code=codes[name]||"—";
     let actions="";
-
-    if(status==="pending")
-      actions=`<button onclick="approveEmployee('${name}')">Approve</button>`;
-    else if(status==="approved")
-      actions=`<button onclick="fireEmployee('${name}')">Fire</button>`;
-
+    if(status==="pending") actions=`<button onclick="approveEmployee('${name}')">Approve</button>`;
+    else if(status==="approved") actions=`<button onclick="fireEmployee('${name}')">Fire</button>`;
     let copyBtn = code!=="—" ? `<button onclick="copyCode('${code}')">Copy</button>` : "";
-
     tb.innerHTML+=`
       <tr>
         <td>${name}</td>
@@ -302,29 +344,22 @@ function copyCode(code){
 function approveEmployee(name){
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
   req[name]="approved";
-
   let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
   codes[name]=(Math.floor(10000000+Math.random()*90000000)).toString();
-
   localStorage.setItem("jobRequests",JSON.stringify(req));
   localStorage.setItem("employeeCodes",JSON.stringify(codes));
-
   updateManagerTable();
   alert(name+"'s employee code: "+codes[name]);
 }
 
 function fireEmployee(name){
   if(!confirm("Fire "+name+"?")) return;
-
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
   let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
-
   delete req[name];
   delete codes[name];
-
   localStorage.setItem("jobRequests",JSON.stringify(req));
   localStorage.setItem("employeeCodes",JSON.stringify(codes));
-
   updateManagerTable();
   alert(name+" fired.");
 }
@@ -333,16 +368,12 @@ function quitJob(){
   let code=employeeCode.value;
   let codes=JSON.parse(localStorage.getItem("employeeCodes")||"{}");
   let req=JSON.parse(localStorage.getItem("jobRequests")||"{}");
-
   let name=Object.keys(codes).find(n=>codes[n]===code);
   if(!name) return alert("Error: employee not found");
-
   delete codes[name];
   req[name]="quit_pending";
-
   localStorage.setItem("employeeCodes",JSON.stringify(codes));
   localStorage.setItem("jobRequests",JSON.stringify(req));
-
   alert("You quit your job.");
   showPage("startPage");
 }
@@ -350,6 +381,7 @@ function quitJob(){
 /* ------------------ LOAD LAST PAGE ------------------ */
 window.onload=function(){
   showPage(localStorage.getItem("currentPage")||"startPage");
+  populateOrderSelect();
 }
 </script>
 </body>
