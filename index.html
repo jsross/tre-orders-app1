@@ -20,17 +20,21 @@
 
 <h1>Welcome to Ms. Balaji Jules Orders</h1>
 
+<!-- START PAGE -->
 <div id="startPage" class="box">
   <button onclick="employeeFlow()">I am Employee</button>
   <button onclick="notEmployeeFlow()">I am Not Employee</button>
+  <button onclick="managerFlow()">I am Manager</button>
 </div>
 
+<!-- EMPLOYEE CODE LOGIN -->
 <div id="codePage" class="box hidden">
   <h2>Enter Employee Code</h2>
   <input id="employeeCode" type="password" placeholder="Employee Code">
   <button onclick="checkEmployeeCode()">Submit</button>
 </div>
 
+<!-- EMPLOYEE DASHBOARD -->
 <div id="employeePage" class="box hidden">
   <h2>Add Items to List</h2>
   <input id="itemName" placeholder="Item Name">
@@ -52,26 +56,42 @@
   <button onclick="backToStart()">Back to Start</button>
 </div>
 
+<!-- CUSTOMER ORDER PAGE -->
 <div id="orderPage" class="box hidden">
   <h2>Place Your Order</h2>
-  <table id="orderTable">
-    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th><th>Action</th></tr></thead>
-    <tbody></tbody>
-  </table>
   <input id="orderName" placeholder="Your Name">
   <input id="orderQty" type="number" placeholder="Quantity">
   <select id="orderItem"></select>
   <button onclick="submitOrder()">Submit Order</button>
+  <button onclick="applyForEmployee()">Apply to Become Employee</button>
   <p id="orderMessage"></p>
+  <p id="applyMessage"></p>
+  
+  <h3>Current Orders</h3>
+  <table id="orderTable">
+    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th><th>Action</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <button onclick="backToStart()">Back to Start</button>
+</div>
+
+<!-- MANAGER PAGE -->
+<div id="managerPage" class="box hidden">
+  <h2>Employee Requests</h2>
+  <table id="managerTable">
+    <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody></tbody>
+  </table>
   <button onclick="backToStart()">Back to Start</button>
 </div>
 
 <script>
 let isEmployee = false;
 
-// --- Page navigation and persistence ---
+// --- PAGE NAVIGATION ---
 function showPage(pageId) {
-  ['startPage','codePage','employeePage','orderPage'].forEach(id => {
+  ['startPage','codePage','employeePage','orderPage','managerPage'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
   document.getElementById(pageId).style.display = 'block';
@@ -87,11 +107,25 @@ function notEmployeeFlow() {
   isEmployee = false;
   showPage('orderPage');
   updateOrderTable();
+  populateOrderSelect();
 }
 
+function managerFlow() {
+  showPage('managerPage');
+  updateManagerTable();
+}
+
+function backToStart() {
+  showPage('startPage');
+  document.getElementById("orderMessage").innerText = "";
+  document.getElementById("applyMessage").innerText = "";
+}
+
+// --- EMPLOYEE LOGIN ---
 function checkEmployeeCode() {
   const code = document.getElementById("employeeCode").value;
-  if(code === "10203040") {
+  const codes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
+  if(Object.values(codes).includes(code)) {
     showPage('employeePage');
     updateListingTable();
     updateEmployeeOrdersTable();
@@ -101,12 +135,7 @@ function checkEmployeeCode() {
   }
 }
 
-function backToStart() {
-  showPage('startPage');
-  document.getElementById("orderMessage").innerText = "";
-}
-
-// --- Items ---
+// --- ITEMS MANAGEMENT ---
 function addItem() {
   const name = document.getElementById("itemName").value.trim();
   const price = parseFloat(document.getElementById("itemPrice").value);
@@ -154,7 +183,7 @@ function populateOrderSelect() {
   });
 }
 
-// --- Orders ---
+// --- ORDERS MANAGEMENT ---
 function updateEmployeeOrdersTable() {
   let orders = JSON.parse(localStorage.getItem("orders") || "[]");
   let tbody = document.querySelector("#employeeOrdersTable tbody");
@@ -177,7 +206,6 @@ function updateOrderTable() {
     let row = document.createElement("tr");
     row.innerHTML = `<td>${order.customer}</td><td>${order.item}</td><td>${order.quantity}</td>`;
     
-    // Add delete button if this is the customer's order
     if(!isEmployee && customerName && order.customer === customerName) {
       let delTd = document.createElement("td");
       let delBtn = document.createElement("button");
@@ -190,7 +218,6 @@ function updateOrderTable() {
 
     tbody.appendChild(row);
   });
-  populateOrderSelect();
 }
 
 function submitOrder() {
@@ -210,24 +237,67 @@ function submitOrder() {
   localStorage.setItem("orders", JSON.stringify(orders));
 
   document.getElementById("orderMessage").innerText = "Send money to WI3 and come to WI3 for your order.";
-
   document.getElementById("orderName").value = "";
   document.getElementById("orderQty").value = "";
-
-  if(isEmployee) updateEmployeeOrdersTable();
-  else updateOrderTable();
+  updateOrderTable();
+  updateEmployeeOrdersTable();
 }
 
 function deleteOrder(index) {
   let orders = JSON.parse(localStorage.getItem("orders") || "[]");
   orders.splice(index, 1);
   localStorage.setItem("orders", JSON.stringify(orders));
-  
-  if(isEmployee) updateEmployeeOrdersTable();
-  else updateOrderTable();
+  updateOrderTable();
+  updateEmployeeOrdersTable();
 }
 
-// --- On page load ---
+// --- APPLY TO BECOME EMPLOYEE ---
+function applyForEmployee() {
+  let applicant = document.getElementById("orderName").value.trim();
+  if(!applicant) { 
+    alert("Enter your name to apply"); 
+    return; 
+  }
+
+  let requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+  if(requests[applicant]) {
+    document.getElementById("applyMessage").innerText = "You have already applied.";
+    return;
+  }
+
+  requests[applicant] = 'pending';
+  localStorage.setItem("jobRequests", JSON.stringify(requests));
+  document.getElementById("applyMessage").innerText = "Application submitted! Wait for manager approval.";
+}
+
+// --- MANAGER APPROVAL ---
+function updateManagerTable() {
+  let requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+  let tbody = document.querySelector("#managerTable tbody");
+  tbody.innerHTML = "";
+  for(let name in requests) {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${name}</td><td>${requests[name]}</td>
+                     <td>${requests[name]==='pending' ? `<button onclick="approveEmployee('${name}')">Approve</button>` : ''}</td>`;
+    tbody.appendChild(row);
+  }
+}
+
+function approveEmployee(name) {
+  let requests = JSON.parse(localStorage.getItem("jobRequests") || "{}");
+  requests[name] = 'approved';
+  localStorage.setItem("jobRequests", JSON.stringify(requests));
+
+  let code = Math.floor(10000000 + Math.random() * 90000000); 
+  let employeeCodes = JSON.parse(localStorage.getItem("employeeCodes") || "{}");
+  employeeCodes[name] = code.toString();
+  localStorage.setItem("employeeCodes", JSON.stringify(employeeCodes));
+
+  alert(`${name} approved! Employee Code: ${code}`);
+  updateManagerTable();
+}
+
+// --- ON PAGE LOAD ---
 window.onload = function() {
   const savedPage = localStorage.getItem('currentPage');
   if(savedPage) {
@@ -238,6 +308,9 @@ window.onload = function() {
       populateOrderSelect();
     } else if(savedPage === 'orderPage') {
       updateOrderTable();
+      populateOrderSelect();
+    } else if(savedPage === 'managerPage') {
+      updateManagerTable();
     }
   } else {
     showPage('startPage');
