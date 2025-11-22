@@ -45,7 +45,7 @@
 
   <h3>Submitted Orders</h3>
   <table id="employeeOrdersTable">
-    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th></tr></thead>
+    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th><th>Action</th></tr></thead>
     <tbody></tbody>
   </table>
 
@@ -55,7 +55,7 @@
 <div id="orderPage" class="box hidden">
   <h2>Place Your Order</h2>
   <table id="orderTable">
-    <thead><tr><th>Name</th><th>Price</th></tr></thead>
+    <thead><tr><th>Customer</th><th>Item</th><th>Quantity</th><th>Action</th></tr></thead>
     <tbody></tbody>
   </table>
   <input id="orderName" placeholder="Your Name">
@@ -154,32 +154,45 @@ function populateOrderSelect() {
   });
 }
 
-// --- Non-employee ---
-function updateOrderTable() {
-  let items = JSON.parse(localStorage.getItem("items") || "[]");
-  let tbody = document.querySelector("#orderTable tbody");
-  tbody.innerHTML = "";
-  items.forEach(i => {
-    let row = document.createElement("tr");
-    row.innerHTML = `<td>${i.name}</td><td>$${i.price.toFixed(2)}</td>`;
-    tbody.appendChild(row);
-  });
-  populateOrderSelect();
-}
-
 // --- Orders ---
 function updateEmployeeOrdersTable() {
   let orders = JSON.parse(localStorage.getItem("orders") || "[]");
   let tbody = document.querySelector("#employeeOrdersTable tbody");
   tbody.innerHTML = "";
-  orders.forEach(o => {
+  orders.forEach((o, index) => {
     let row = document.createElement("tr");
-    row.innerHTML = `<td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>`;
+    row.innerHTML = `<td>${o.customer}</td><td>${o.item}</td><td>${o.quantity}</td>
+                     <td><button class="deleteBtn" onclick="deleteOrder(${index})">Delete</button></td>`;
     tbody.appendChild(row);
   });
 }
 
-// --- Submit order ---
+function updateOrderTable() {
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  let tbody = document.querySelector("#orderTable tbody");
+  tbody.innerHTML = "";
+  const customerName = document.getElementById("orderName").value.trim();
+
+  orders.forEach((order, index) => {
+    let row = document.createElement("tr");
+    row.innerHTML = `<td>${order.customer}</td><td>${order.item}</td><td>${order.quantity}</td>`;
+    
+    // Add delete button if this is the customer's order
+    if(!isEmployee && customerName && order.customer === customerName) {
+      let delTd = document.createElement("td");
+      let delBtn = document.createElement("button");
+      delBtn.className = "deleteBtn";
+      delBtn.innerText = "Delete";
+      delBtn.onclick = () => deleteOrder(index);
+      delTd.appendChild(delBtn);
+      row.appendChild(delTd);
+    }
+
+    tbody.appendChild(row);
+  });
+  populateOrderSelect();
+}
+
 function submitOrder() {
   const name = document.getElementById("orderName").value.trim();
   const qty = parseInt(document.getElementById("orderQty").value);
@@ -202,9 +215,19 @@ function submitOrder() {
   document.getElementById("orderQty").value = "";
 
   if(isEmployee) updateEmployeeOrdersTable();
+  else updateOrderTable();
 }
 
-// --- On page load, restore last page ---
+function deleteOrder(index) {
+  let orders = JSON.parse(localStorage.getItem("orders") || "[]");
+  orders.splice(index, 1);
+  localStorage.setItem("orders", JSON.stringify(orders));
+  
+  if(isEmployee) updateEmployeeOrdersTable();
+  else updateOrderTable();
+}
+
+// --- On page load ---
 window.onload = function() {
   const savedPage = localStorage.getItem('currentPage');
   if(savedPage) {
